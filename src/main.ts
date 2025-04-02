@@ -24,10 +24,10 @@ async function bootstrap() {
 
   // Swagger Configuration
   const config = new DocumentBuilder()
-    .setTitle('Fx Rumble API')
-    .setDescription('API documentation for Fx Rumble')
+    .setTitle('Starcade API')
+    .setDescription('API documentation for Starcade')
     .setVersion('1.0')
-    .addTag('Fx Rumble')
+    .addTag('Starcade')
     .addCookieAuth()
     .build();
 

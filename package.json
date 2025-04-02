@@ -1,7 +1,7 @@
 {
-  "name": "fxrumble-api",
+  "name": "starcade-api",
   "version": "0.0.1",
-  "description": "fxrumble-api",
+  "description": "starcade-api",
   "private": true,
   "scripts": {
     "build": "nest build",
