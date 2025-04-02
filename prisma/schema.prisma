@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model User {
+  id                 Int      @id @default(autoincrement())
+  email              String   @unique @db.VarChar(100)
+  first_name         String   @db.VarChar(50)
+  last_name          String   @db.VarChar(50)
+  password           String   @db.VarChar(200)
+  verification_token String?  @unique @db.VarChar(100)
+  is_verified        Boolean? @default(false)
+  about_me           String?  @db.Text
+  photo_id           Int?     @unique
+  photo              Photos?  @relation(fields: [photo_id], references: [photo_id])
+  created_at         DateTime @default(now())
+  reset_password_token String? @unique @db.VarChar(255)
+  reset_password_expires DateTime?
+}
+
+model Photos {
+  photo_id   Int      @id @default(autoincrement())
+  serial_id  String   @unique(map: "photo_serial") @db.VarChar(200)
+  original   String   @db.VarChar(200)
+  large      String   @db.VarChar(200)
+  medium     String   @db.VarChar(200)
+  small      String   @db.VarChar(200)
+  created_on DateTime @default(now()) @db.Timestamp(6)
+  updated_on DateTime @default(now()) @db.Timestamp(6)
+
+  user User?
+  article Article?
+}
+
+
+model Article {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  content     String   @db.Text
+  video_url   String?  @db.VarChar(255) 
+  photo_id    Int?     @unique 
+  created_at  DateTime @default(now())
+  photo       Photos?  @relation(fields: [photo_id], references: [photo_id])
+}
+
+model NewsletterSubscriber {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(100)       
+  token        String?  @unique @db.VarChar(100)
+  is_confirmed  Boolean  @default(false)
+  confirmed_at  DateTime?
+  created_at    DateTime @default(now())
+}
+
