@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { MailerModule } from 'src/mailer/mailer.module';
+import { FacebookStrategy } from './facebook.strategy';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { MailerModule } from 'src/mailer/mailer.module';
     }),
     MailerModule
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy,FacebookStrategy],
   controllers: [AuthController],
   exports: [AuthService, JwtModule],
 })

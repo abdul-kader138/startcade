@@ -77,6 +77,31 @@ export class AuthService {
   }
 
   /**
+   * 🔹 facebook Login - Stores JWT in Secure HTTP-Only Cookie
+   */
+  async facebookLogin(user: any, res: Response) {
+    const payload = { sub: user.facebookId, email: user.email };
+    const token = this.jwtService.sign(payload, { expiresIn: '1h' });
+
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60,
+    });
+
+    return res.json({
+      message: Lang.login_successful_message,
+      user: {
+        id: user.facebookId,
+        email: user.email,
+        first_name: user.name,
+        last_name: "",
+      },
+    });
+  }
+
+  /**
    * 🔹 Register User
    */
   async register(userDto: UserDto) {

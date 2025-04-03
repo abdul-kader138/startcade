@@ -21,6 +21,7 @@ import { AuthService } from './auth.service';
 import { UserDto } from './dto/add-user.dto';
 import { EditUserDto } from './dto/edit-user.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -187,5 +188,18 @@ export class AuthController {
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
+  }
+
+  @Get('facebook')
+  @UseGuards(AuthGuard('facebook'))
+  async facebookLogin() {
+    // handled by Passport
+  }
+
+  @Get('facebook/callback')
+  @UseGuards(AuthGuard('facebook'))
+  async facebookCallback(@Req() req, @Res() res) {
+    const user = req.user;
+    return this.authService.login(user, res);
   }
 }
