@@ -16,7 +16,7 @@ import { FacebookStrategy } from './facebook.strategy';
     }),
     MailerModule
   ],
-  providers: [AuthService, JwtStrategy,FacebookStrategy],
+  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
   exports: [AuthService, JwtModule],
 })
