@@ -95,12 +95,78 @@ export class AuthService {
       user: {
         id: user.facebookId,
         email: user.email,
-        first_name: user.name,
-        last_name: "",
+        first_name: user.first_name,
+        last_name: user.last_name,
       },
     });
   }
 
+
+  /**
+   * 🔹 github Login - Stores JWT in Secure HTTP-Only Cookie
+   */
+  async githubLogin(profile: any, res: Response) {
+    Logger.log(profile);
+    const githubId = profile.githubId;
+    const email = profile.email;
+    const firstName = profile.firstName;
+    const lastName = profile.lastName;
+  
+    let userProvider = await prisma.userProvider.findUnique({
+      where: {
+        provider_provider_id: {
+          provider: 'github',
+          provider_id: githubId,
+        },
+      },
+      include: { user: true },
+    });
+  
+    let user = userProvider?.user;
+  
+    if (!user) {
+      // If email already exists (registered with email/password), link GitHub
+      const existingUser = await prisma.user.findUnique({ where: { email } });
+  
+      if (existingUser) {
+        await prisma.userProvider.create({
+          data: {
+            provider: 'github',
+            provider_id: githubId,
+            user_id: existingUser.id,
+          },
+        });
+        user = existingUser;
+      } else {
+        // New user registration with GitHub
+        user = await prisma.user.create({
+          data: {
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            password: bcrypt.hashSync('social_login', 10),
+            is_verified: true,
+            userProviders: {
+              create: {
+                provider: 'github',
+                provider_id: githubId,
+              },
+            },
+          },
+        });
+      }
+    }
+    const payload = { id: user.id, email: user.email };
+    const token = this.jwtService.sign(payload, { expiresIn: '1h' });
+  
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 1000 * 60 * 60,
+    });
+  }
+  
   /**
    * 🔹 Register User
    */

@@ -8,20 +8,32 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
+model UserProvider {
+  id           Int      @id @default(autoincrement())
+  user_id      Int
+  provider     String   @db.VarChar(50)
+  provider_id  String   @db.VarChar(255) 
+  created_at   DateTime @default(now())
+
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  @@unique([provider, provider_id]) 
+}
+
 model User {
-  id                 Int      @id @default(autoincrement())
-  email              String   @unique @db.VarChar(100)
-  first_name         String   @db.VarChar(50)
-  last_name          String   @db.VarChar(50)
-  password           String   @db.VarChar(200)
-  verification_token String?  @unique @db.VarChar(100)
-  is_verified        Boolean? @default(false)
-  about_me           String?  @db.Text
-  photo_id           Int?     @unique
-  photo              Photos?  @relation(fields: [photo_id], references: [photo_id])
-  created_at         DateTime @default(now())
-  reset_password_token String? @unique @db.VarChar(255)
+  id                 Int              @id @default(autoincrement())
+  email              String           @unique @db.VarChar(100)
+  first_name         String           @db.VarChar(50)
+  last_name          String           @db.VarChar(50)
+  password           String           @db.VarChar(200)
+  verification_token String?          @unique @db.VarChar(100)
+  is_verified        Boolean?         @default(false)
+  about_me           String?          @db.Text
+  photo_id           Int?             @unique
+  photo              Photos?          @relation(fields: [photo_id], references: [photo_id])
+  created_at         DateTime         @default(now())
+  reset_password_token String?        @unique @db.VarChar(255)
   reset_password_expires DateTime?
+  userProviders      UserProvider[]
 }
 
 model Photos {

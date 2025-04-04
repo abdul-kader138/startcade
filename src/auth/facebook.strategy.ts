@@ -20,7 +20,8 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
     return {
       facebookId: id,
       email: emails?.[0]?.value,
-      name: `${name?.givenName} ${name?.familyName}`,
+      first_name: `${name?.givenName}`,
+      last_name: `${name?.familyName}`,
       avatar: photos?.[0]?.value,
     };
   }

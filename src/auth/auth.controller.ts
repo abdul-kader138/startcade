@@ -200,6 +200,21 @@ export class AuthController {
   @UseGuards(AuthGuard('facebook'))
   async facebookCallback(@Req() req, @Res() res) {
     const user = req.user;
-    return this.authService.login(user, res);
+    return this.authService.facebookLogin(user, res);
   }
+
+  @Get('github')
+  @UseGuards(AuthGuard('github'))
+  async githubLogin() {
+    // This redirects to GitHub OAuth page
+  }
+
+  @Get('github/callback')
+  @UseGuards(AuthGuard('github'))
+  async githubCallback(@Req() req, @Res() res) {
+     const user = req.user;
+     await this.authService.githubLogin(user, res);
+     return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
+  }
+
 }

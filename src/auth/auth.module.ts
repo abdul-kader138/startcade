@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { MailerModule } from 'src/mailer/mailer.module';
 import { FacebookStrategy } from './facebook.strategy';
+import { GitHubStrategy } from './github.strategy';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { FacebookStrategy } from './facebook.strategy';
     }),
     MailerModule
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy,FacebookStrategy,GitHubStrategy],
   controllers: [AuthController],
   exports: [AuthService, JwtModule],
 })
