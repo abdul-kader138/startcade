@@ -79,27 +79,69 @@ export class AuthService {
   /**
    * 🔹 facebook Login - Stores JWT in Secure HTTP-Only Cookie
    */
-  async facebookLogin(user: any, res: Response) {
-    const payload = { sub: user.facebookId, email: user.email };
+  async facebookLogin(profile: any, res: Response) {
+    const facebookId = profile.facebookId;
+    const email = profile.email;
+    const firstName = profile.firstName;
+    const lastName = profile.lastName;
+  
+    let userProvider = await prisma.userProvider.findUnique({
+      where: {
+        provider_provider_id: {
+          provider: 'facebook',
+          provider_id: facebookId,
+        },
+      },
+      include: { user: true },
+    });
+  
+    let user = userProvider?.user;
+  
+    if (!user) {
+      // Try to link to existing user by email
+      const existingUser = await prisma.user.findUnique({ where: { email } });
+  
+      if (existingUser) {
+        await prisma.userProvider.create({
+          data: {
+            provider: 'facebook',
+            provider_id: facebookId,
+            user_id: existingUser.id,
+          },
+        });
+        user = existingUser;
+      } else {
+        // Create new user
+        user = await prisma.user.create({
+          data: {
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            password: bcrypt.hashSync('social_login', 10),
+            is_verified: true,
+            userProviders: {
+              create: {
+                provider: 'facebook',
+                provider_id: facebookId,
+              },
+            },
+          },
+        });
+      }
+    }
+  
+    // 🔐 Issue JWT
+    const payload = { id: user.id, email: user.email };
     const token = this.jwtService.sign(payload, { expiresIn: '1h' });
-
+  
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60,
     });
-
-    return res.json({
-      message: Lang.login_successful_message,
-      user: {
-        id: user.facebookId,
-        email: user.email,
-        first_name: user.first_name,
-        last_name: user.last_name,
-      },
-    });
   }
+  
 
 
   /**

@@ -200,7 +200,8 @@ export class AuthController {
   @UseGuards(AuthGuard('facebook'))
   async facebookCallback(@Req() req, @Res() res) {
     const user = req.user;
-    return this.authService.facebookLogin(user, res);
+    await this.authService.facebookLogin(user, res);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
   }
 
   @Get('github')
