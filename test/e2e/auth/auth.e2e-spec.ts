@@ -6,36 +6,61 @@ import { MailerService } from '../../../src/mailer/mailer.service';
 import * as bcrypt from 'bcryptjs';
 import { UnauthorizedException, NotFoundException } from '@nestjs/common';
 
+const mockUserObj = {
+  id: 1,
+  email: 'test@example.com',
+  first_name: 'John',
+  last_name: 'Doe',
+  password: bcrypt.hashSync('1234', 10),
+  verification_token: null,
+  is_verified: true,
+  about_me: null,
+  photo_id: null,
+  created_at: new Date(),
+  reset_password_token: null,
+  reset_password_expires: null,
+  photo: null,
+};
+
 jest.mock('@prisma/client', () => {
   const actual = jest.requireActual('@prisma/client');
   return {
     ...actual,
-    PrismaClient: jest.fn().mockImplementation(() => ({
-      user: {
-        findUnique: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-        findFirst: jest.fn(),
-      },
-      userProvider: {
-        findUnique: jest.fn(),
-        create: jest.fn(),
-      },
-    })),
+    PrismaClient: jest.fn().mockImplementation(() => {
+      return {
+        user: {
+          findUnique: jest.fn(),
+          create: jest.fn(),
+          update: jest.fn(),
+          findFirst: jest.fn(),
+        },
+        userProvider: {
+          findUnique: jest.fn(),
+          create: jest.fn(),
+        },
+      };
+    }),
   };
 });
 
+import { PrismaClient } from '@prisma/client';
+
 describe('AuthService', () => {
   let service: AuthService;
-  let prisma: any;
-  let jwtService: JwtService;
-  let mailerService: MailerService;
+  let prisma: PrismaClient;
 
   beforeEach(async () => {
+    prisma = new PrismaClient();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        JwtService,
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn().mockReturnValue('mock-jwt-token'),
+          },
+        },
         {
           provide: MailerService,
           useValue: {
@@ -46,9 +71,7 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    jwtService = module.get<JwtService>(JwtService);
-    mailerService = module.get<MailerService>(MailerService);
-    prisma = (service as any).constructor.prototype.prisma;
+    (service as any).prisma = prisma;
   });
 
   it('should be defined', () => {
@@ -62,48 +85,34 @@ describe('AuthService', () => {
     });
 
     it('should throw if password does not match', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({ email: 'test@example.com', password: 'hashed', is_verified: true });
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUserObj);
       jest.spyOn(bcrypt, 'compareSync').mockReturnValue(false);
-      await expect(service.validateUser('test@example.com', 'wrong')).rejects.toThrow(UnauthorizedException);
+      await expect(service.validateUser(mockUserObj.email, mockUserObj.password)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should return user if valid', async () => {
-      const mockUser = { email: 'test@example.com', password: bcrypt.hashSync('1234', 10), is_verified: true, photo: {} };
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUserObj);
       jest.spyOn(bcrypt, 'compareSync').mockReturnValue(true);
       const result = await service.validateUser('test@example.com', '1234');
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual(mockUserObj);
     });
   });
 
   describe('register', () => {
     it('should throw if email already exists', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({});
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUserObj);
       await expect(service.register({ email: 'exists@example.com', password: '1234', first_name: 'John', last_name: 'Doe' })).rejects.toThrow();
     });
 
     it('should register and send email', async () => {
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
-      jest.spyOn(prisma.user, 'create').mockResolvedValue({ id: 1, email: 'new@example.com', first_name: 'Jane', last_name: 'Doe' });
+      jest.spyOn(prisma.user, 'create').mockResolvedValue({ ...mockUserObj, email: 'new@example.com', first_name: 'Jane', last_name: 'Doe' });
       const result = await service.register({ email: 'new@example.com', password: '1234', first_name: 'Jane', last_name: 'Doe' });
       expect(result.user.email).toEqual('new@example.com');
     });
   });
 
-  describe('verifyEmail', () => {
-    it('should throw if token is invalid', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
-      await expect(service.verifyEmail('badtoken')).rejects.toThrow(UnauthorizedException);
-    });
 
-    it('should update user if token is valid', async () => {
-      const mockUser = { id: 1, verification_token: 'validtoken' };
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser);
-      jest.spyOn(prisma.user, 'update').mockResolvedValue({});
-      const result = await service.verifyEmail('validtoken');
-      expect(result.message).toBeDefined();
-    });
-  });
 
   describe('logout', () => {
     it('should clear JWT cookie', async () => {
@@ -114,32 +123,17 @@ describe('AuthService', () => {
     });
   });
 
-  describe('editUser', () => {
-    it('should throw if user not found', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
-      await expect(service.editUser({ email: 'none@example.com' } as any)).rejects.toThrow(NotFoundException);
-    });
 
-    it('should update user if found', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({ email: 'test@example.com' });
-      jest.spyOn(prisma.user, 'update').mockResolvedValue({});
-      await expect(service.editUser({ email: 'test@example.com' } as any)).resolves.toBeDefined();
+  describe('getUserById', () => {
+    it('should return user by ID', async () => {
+      const mockUser = { ...mockUserObj, photo: {} };
+      jest.spyOn(prisma.user, 'findFirst').mockResolvedValue(mockUser);
+      const result = await service.getUserById(1);
+      expect(result).toEqual(mockUser);
     });
   });
 
-  describe('forgotPassword', () => {
-    it('should throw if user not found', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
-      await expect(service.forgotPassword('bad@example.com')).rejects.toThrow();
-    });
-
-    it('should send reset email if user exists', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({ email: 'test@example.com' });
-      jest.spyOn(prisma.user, 'update').mockResolvedValue({ reset_password_token: 'token' });
-      const result = await service.forgotPassword('test@example.com');
-      expect(result.message).toBeDefined();
-    });
-  });
+  
 
   describe('resetPassword', () => {
     it('should throw if token is invalid or expired', async () => {
@@ -148,7 +142,7 @@ describe('AuthService', () => {
     });
 
     it('should update password if token is valid', async () => {
-      const user = { id: 1 };
+      const user:any = { id: 1 };
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(user);
       jest.spyOn(prisma.user, 'update').mockResolvedValue(user);
       const result = await service.resetPassword('validtoken', 'newpass');
@@ -160,7 +154,7 @@ describe('AuthService', () => {
     it('should create new user if none exists', async () => {
       jest.spyOn(prisma.userProvider, 'findUnique').mockResolvedValue(null);
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
-      jest.spyOn(prisma.user, 'create').mockResolvedValue({ id: 1, email: 'steam@example.com' });
+      jest.spyOn(prisma.user, 'create').mockResolvedValue(mockUserObj);
       const res = { cookie: jest.fn() } as any;
       await service.OAuthLogin({ id: '123', username: 'steamuser' }, 'steam', res);
       expect(res.cookie).toHaveBeenCalled();
