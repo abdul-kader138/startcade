@@ -21,7 +21,7 @@ export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {
   const lastName = rest.join(' ');
 
   const user = {
-    githubId:id,
+    id,
     username,
     email: emails?.[0]?.value || null,
     firstName,

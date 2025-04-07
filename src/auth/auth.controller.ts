@@ -200,7 +200,7 @@ export class AuthController {
   @UseGuards(AuthGuard('facebook'))
   async facebookCallback(@Req() req, @Res() res) {
     const user = req.user;
-    await this.authService.facebookLogin(user, res);
+    await this.authService.OAuthLogin(user, 'facebook',res);
     return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
   }
 
@@ -214,8 +214,22 @@ export class AuthController {
   @UseGuards(AuthGuard('github'))
   async githubCallback(@Req() req, @Res() res) {
      const user = req.user;
-     await this.authService.githubLogin(user, res);
+     await this.authService.OAuthLogin(user,'github', res);
      return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
+  }
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth(@Req() req) {
+      // This redirects to Google OAuth page
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthRedirect(@Req() req, @Res() res) {
+    const user = req.user;
+    await this.authService.OAuthLogin(user, 'google',res);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
   }
 
 }

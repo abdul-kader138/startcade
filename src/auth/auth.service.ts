@@ -77,10 +77,10 @@ export class AuthService {
   }
 
   /**
-   * 🔹 facebook Login - Stores JWT in Secure HTTP-Only Cookie
+   * 🔹 oauth Login - Stores JWT in Secure HTTP-Only Cookie
    */
-  async facebookLogin(profile: any, res: Response) {
-    const facebookId = profile.facebookId;
+  async OAuthLogin(profile: any, provider: string, res: Response) {
+    const providerId = profile.id;
     const email = profile.email;
     const firstName = profile.firstName;
     const lastName = profile.lastName;
@@ -88,8 +88,8 @@ export class AuthService {
     let userProvider = await prisma.userProvider.findUnique({
       where: {
         provider_provider_id: {
-          provider: 'facebook',
-          provider_id: facebookId,
+          provider,
+          provider_id: providerId,
         },
       },
       include: { user: true },
@@ -98,20 +98,20 @@ export class AuthService {
     let user = userProvider?.user;
   
     if (!user) {
-      // Try to link to existing user by email
+      // If email already exists (registered with email/password), link provider
       const existingUser = await prisma.user.findUnique({ where: { email } });
   
       if (existingUser) {
         await prisma.userProvider.create({
           data: {
-            provider: 'facebook',
-            provider_id: facebookId,
+            provider,
+            provider_id: providerId,
             user_id: existingUser.id,
           },
         });
         user = existingUser;
       } else {
-        // Create new user
+        // New user registration via OAuth
         user = await prisma.user.create({
           data: {
             email,
@@ -121,8 +121,8 @@ export class AuthService {
             is_verified: true,
             userProviders: {
               create: {
-                provider: 'facebook',
-                provider_id: facebookId,
+                provider,
+                provider_id: providerId,
               },
             },
           },
@@ -130,7 +130,6 @@ export class AuthService {
       }
     }
   
-    // 🔐 Issue JWT
     const payload = { id: user.id, email: user.email };
     const token = this.jwtService.sign(payload, { expiresIn: '1h' });
   
@@ -140,74 +139,9 @@ export class AuthService {
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60,
     });
+  
   }
   
-
-
-  /**
-   * 🔹 github Login - Stores JWT in Secure HTTP-Only Cookie
-   */
-  async githubLogin(profile: any, res: Response) {
-    Logger.log(profile);
-    const githubId = profile.githubId;
-    const email = profile.email;
-    const firstName = profile.firstName;
-    const lastName = profile.lastName;
-  
-    let userProvider = await prisma.userProvider.findUnique({
-      where: {
-        provider_provider_id: {
-          provider: 'github',
-          provider_id: githubId,
-        },
-      },
-      include: { user: true },
-    });
-  
-    let user = userProvider?.user;
-  
-    if (!user) {
-      // If email already exists (registered with email/password), link GitHub
-      const existingUser = await prisma.user.findUnique({ where: { email } });
-  
-      if (existingUser) {
-        await prisma.userProvider.create({
-          data: {
-            provider: 'github',
-            provider_id: githubId,
-            user_id: existingUser.id,
-          },
-        });
-        user = existingUser;
-      } else {
-        // New user registration with GitHub
-        user = await prisma.user.create({
-          data: {
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            password: bcrypt.hashSync('social_login', 10),
-            is_verified: true,
-            userProviders: {
-              create: {
-                provider: 'github',
-                provider_id: githubId,
-              },
-            },
-          },
-        });
-      }
-    }
-    const payload = { id: user.id, email: user.email };
-    const token = this.jwtService.sign(payload, { expiresIn: '1h' });
-  
-    res.cookie('jwt', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 1000 * 60 * 60,
-    });
-  }
   
   /**
    * 🔹 Register User
