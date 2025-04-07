@@ -232,4 +232,18 @@ export class AuthController {
     return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
   }
 
+  @Get('steam')
+  @UseGuards(AuthGuard('steam'))
+  async steamLogin() {
+    // This redirects to Steam page
+  }
+
+  @Get('steam/callback')
+  @UseGuards(AuthGuard('steam'))
+  async steamLoginCallback(@Req() req, @Res() res: Response) {
+    const user = req.user;
+    await this.authService.OAuthLogin(user, 'steam',res);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
+  }
+
 }

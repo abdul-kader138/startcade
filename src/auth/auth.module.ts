@@ -8,6 +8,7 @@ import { MailerModule } from 'src/mailer/mailer.module';
 import { FacebookStrategy } from './facebook.strategy';
 import { GitHubStrategy } from './github.strategy';
 import { GoogleStrategy } from './google.strategy';
+import { SteamStrategy } from './steam.strategy';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { GoogleStrategy } from './google.strategy';
     }),
     MailerModule
   ],
-  providers: [AuthService, JwtStrategy,FacebookStrategy,GitHubStrategy,GoogleStrategy],
+  providers: [AuthService, JwtStrategy,FacebookStrategy,GitHubStrategy,GoogleStrategy,SteamStrategy],
   controllers: [AuthController],
   exports: [AuthService, JwtModule],
 })

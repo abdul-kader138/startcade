@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -81,11 +80,14 @@ export class AuthService {
    */
   async OAuthLogin(profile: any, provider: string, res: Response) {
     const providerId = profile.id;
-    const email = profile.email;
-    const firstName = profile.firstName;
-    const lastName = profile.lastName;
+    const email = profile.email || null; // Steam doesn't provide email
+    const firstName = profile.firstName || profile.username || 'Unknown';
+    const lastName = profile.lastName || '';
   
-    let userProvider = await prisma.userProvider.findUnique({
+    let user:any = null;
+  
+    // 🔍 1.Check if provider account is already linked
+    const linkedAccount = await prisma.userProvider.findUnique({
       where: {
         provider_provider_id: {
           provider,
@@ -95,41 +97,46 @@ export class AuthService {
       include: { user: true },
     });
   
-    let user = userProvider?.user;
+    if (linkedAccount) {
+      user = linkedAccount.user;
+    } else if (email) {
+      // 🔗 2. Check if user exists with email, link new provider
+      user = await prisma.user.findUnique({ where: { email } });
   
-    if (!user) {
-      // If email already exists (registered with email/password), link provider
-      const existingUser = await prisma.user.findUnique({ where: { email } });
-  
-      if (existingUser) {
+      if (user) {
         await prisma.userProvider.create({
           data: {
             provider,
             provider_id: providerId,
-            user_id: existingUser.id,
-          },
-        });
-        user = existingUser;
-      } else {
-        // New user registration via OAuth
-        user = await prisma.user.create({
-          data: {
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            password: bcrypt.hashSync('social_login', 10),
-            is_verified: true,
-            userProviders: {
-              create: {
-                provider,
-                provider_id: providerId,
-              },
-            },
+            user_id: user.id,
           },
         });
       }
     }
   
+    // 🆕 3. Register new user if not found
+    if (!user) {
+      const fallbackEmail = email ?? `${provider}_${providerId}@noemail.local`;
+  
+      user = await prisma.user.create({
+        data: {
+          email: fallbackEmail,
+          first_name: firstName,
+          last_name: lastName,
+          password: bcrypt.hashSync('social_login', 10),
+        //  is_verified: !!email, // mark verified only if email present
+          is_verified: true,
+          userProviders: {
+            create: {
+              provider,
+              provider_id: providerId,
+            },
+          },
+        },
+      });
+    }
+  
+    // 🎟️ 4. Generate and set JWT token
     const payload = { id: user.id, email: user.email };
     const token = this.jwtService.sign(payload, { expiresIn: '1h' });
   
@@ -139,6 +146,11 @@ export class AuthService {
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60,
     });
+  
+    // 🔁 5. Redirect based on profile completeness
+   // if (!email) {
+   //   return res.redirect(`${process.env.CLIENT_URL}/complete-profile?token=${token}`);
+   // }
   
   }
   
