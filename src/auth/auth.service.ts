@@ -4,7 +4,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { Response } from 'express';
@@ -13,19 +12,19 @@ import { Helper } from '../utils/helper';
 import { UserDto } from './dto/add-user.dto';
 import { EditUserDto } from './dto/edit-user.dto';
 import { MailerService } from '../mailer/mailer.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
-const prisma = new PrismaClient();
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService,private readonly mailerService: MailerService) {}
+  constructor(private jwtService: JwtService,private readonly mailerService: MailerService,private prisma: PrismaService) {}
   private helper = new Helper();
 
   /**
    * 🔹 Validate User Credentials
    */
   async validateUser(email: string, password: string) {
-    const user = await prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
       include: { photo: true },
     });
@@ -87,7 +86,7 @@ export class AuthService {
     let user:any = null;
   
     // 🔍 1.Check if provider account is already linked
-    const linkedAccount = await prisma.userProvider.findUnique({
+    const linkedAccount = await this.prisma.userProvider.findUnique({
       where: {
         provider_provider_id: {
           provider,
@@ -101,10 +100,10 @@ export class AuthService {
       user = linkedAccount.user;
     } else if (email) {
       // 🔗 2. Check if user exists with email, link new provider
-      user = await prisma.user.findUnique({ where: { email } });
+      user = await this.prisma.user.findUnique({ where: { email } });
   
       if (user) {
-        await prisma.userProvider.create({
+        await this.prisma.userProvider.create({
           data: {
             provider,
             provider_id: providerId,
@@ -118,7 +117,7 @@ export class AuthService {
     if (!user) {
       const fallbackEmail = email ?? `${provider}_${providerId}@noemail.local`;
   
-      user = await prisma.user.create({
+      user = await this.prisma.user.create({
         data: {
           email: fallbackEmail,
           first_name: firstName,
@@ -159,7 +158,7 @@ export class AuthService {
    * 🔹 Register User
    */
   async register(userDto: UserDto) {
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await this.prisma.user.findUnique({
       where: { email: userDto?.email },
     });
     if (existingUser) {
@@ -168,7 +167,7 @@ export class AuthService {
 
     const hashedPassword = bcrypt.hashSync(userDto?.password, 10);
     const verification_token = crypto.randomBytes(32).toString('hex');
-    const user = await prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         first_name: userDto?.first_name,
         last_name: userDto?.last_name,
@@ -198,12 +197,12 @@ export class AuthService {
    * 🔹 Verify Email
    */
   async verifyEmail(token: string) {
-    const user = await prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { verification_token: token },
     });
     if (!user) throw new UnauthorizedException(Lang.invalid_token_message);
 
-    await prisma.user.update({
+    await this.prisma.user.update({
       where: { id: user.id },
       data: { is_verified: true, verification_token: null },
     });
@@ -223,14 +222,14 @@ export class AuthService {
    * 🔹 Edit User
    */
   async editUser(editUserDto: EditUserDto) {
-    const user = await prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email: editUserDto?.email },
     });
     if (!user) {
       throw new NotFoundException(Lang.user_not_found_message);
     }
 
-    return await prisma.user.update({
+    return await this.prisma.user.update({
       where: { email: editUserDto?.email },
       data: {
         first_name: editUserDto?.first_name,
@@ -242,14 +241,14 @@ export class AuthService {
   }
 
   async editUserPhoto(id: number, photo_id: number) {
-    const user = await prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: Number(id) },
     });
     if (!user) {
       throw new NotFoundException(Lang.user_not_found_message);
     }
 
-    return await prisma.user.update({
+    return await this.prisma.user.update({
       where: { id: Number(id) },
       data: {
         photo_id: Number(photo_id),
@@ -258,7 +257,7 @@ export class AuthService {
   }
 
   async getUserById(id: number) {
-    const user = await prisma.user.findFirst({
+    const user = await this.prisma.user.findFirst({
       where: { id },
       include: { photo: true },
     });
@@ -267,7 +266,7 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
-    const user = await prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
     });
 
@@ -278,7 +277,7 @@ export class AuthService {
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 3600000);
 
-    const updated_user = await prisma.user.update({
+    const updated_user = await this.prisma.user.update({
       where: { email },
       data: {
         reset_password_token: token,
@@ -295,7 +294,7 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const user = await prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: {
         reset_password_token: token,
         reset_password_expires: {
@@ -307,7 +306,7 @@ export class AuthService {
     if (!user) throw new Error(Lang.invalid_expire_token);
 
     const password = await bcrypt.hash(newPassword, 10);
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: {
         password: password,

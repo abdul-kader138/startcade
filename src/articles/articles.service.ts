@@ -1,15 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
 import Lang from '../lang/lang';
 import { CreateArticleDto } from './dto/create-article.dto';
+import { PrismaService } from '../../prisma/prisma.service';
 
-const prisma = new PrismaClient();
 @Injectable()
 export class ArticlesService {
-  constructor() {}
+  constructor(private prisma:PrismaService) {}
 
   async createArticle(createArticleDto: CreateArticleDto) {
-    return prisma.article.create({
+    return this.prisma.article.create({
       data: {
         title: createArticleDto.title,
         description: createArticleDto.description,
@@ -21,7 +20,7 @@ export class ArticlesService {
   }
 
   async getAllArticles() {
-    return prisma.article.findMany({
+    return this.prisma.article.findMany({
       include: {
         photo: true,
       },
@@ -29,7 +28,7 @@ export class ArticlesService {
   }
 
   async getArticleById(id: number) {
-    const article = await prisma.article.findUnique({
+    const article = await this.prisma.article.findUnique({
       where: { id },
       include: {
         photo: true,
@@ -44,6 +43,6 @@ export class ArticlesService {
   }
 
   async deleteArticle(id: number) {
-    return prisma.article.delete({ where: { id } });
+    return this.prisma.article.delete({ where: { id } });
   }
 }

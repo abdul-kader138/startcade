@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 
-const prisma = new PrismaClient();
 @Injectable()
 export class PhotosService {
-  constructor() {}
+  constructor(private prisma:PrismaService) {}
 
   async create(file: any): Promise<any> {
-    return await prisma.photos.create({
+    return await this.prisma.photos.create({
       data: {
         serial_id: `${file.serial}`,
         original: file.original,
@@ -19,7 +18,7 @@ export class PhotosService {
   }
 
   async delete(id: number): Promise<any> {
-    return await prisma.photos.delete({
+    return await this.prisma.photos.delete({
       where: {
         photo_id: id,
       },
@@ -27,7 +26,7 @@ export class PhotosService {
   }
 
   findOne(id: string): any {
-    return prisma.photos.findFirst({
+    return this.prisma.photos.findFirst({
       where: {
         photo_id: Number(id),
       },

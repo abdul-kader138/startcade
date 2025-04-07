@@ -1,28 +1,26 @@
 import { Injectable, ConflictException, Logger } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
 import * as crypto from 'crypto';
-import * as nodemailer from 'nodemailer';
 import Lang from '../lang/lang';
 import { Helper } from '../utils/helper';
 import { MailerService } from '../mailer/mailer.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
-const prisma = new PrismaClient();
 @Injectable()
 export class NewsletterService {
-  constructor(private readonly mailerService: MailerService) {}
+  constructor(private readonly mailerService: MailerService, private prisma:PrismaService) {}
 
   private helper = new Helper();
 
 
   async subscribe(email: string) {
-    const existing = await prisma.newsletterSubscriber.findUnique({ where: { email } });
+    const existing = await this.prisma.newsletterSubscriber.findUnique({ where: { email } });
 
     if (existing && existing.is_confirmed) {
       throw new ConflictException(Lang.subscription_exist_message);
     }
     const token=crypto.randomBytes(32).toString('hex');
 
-    const subscribed = await prisma.newsletterSubscriber.upsert({
+    const subscribed = await this.prisma.newsletterSubscriber.upsert({
       where: { email },
       update: { token, is_confirmed: false },
       create: { email, token },
@@ -38,13 +36,13 @@ export class NewsletterService {
   }
 
   async confirmSubscription(token: string) {
-    const subscriber = await prisma.newsletterSubscriber.findUnique({ where: { token } });
+    const subscriber = await this.prisma.newsletterSubscriber.findUnique({ where: { token } });
 
     if (!subscriber) {
       throw new ConflictException(Lang.invalid_token);
     }
 
-    return prisma.newsletterSubscriber.update({
+    return this.prisma.newsletterSubscriber.update({
       where: { token },
       data: {
         is_confirmed: true,
