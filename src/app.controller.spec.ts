@@ -6,11 +6,26 @@ describe('AppController', () => {
   let appController: AppController;
 
   beforeEach(async () => {
-    const app: TestingModule = await Test.createTestingModule({
+    const module: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService],
+      providers: [
+        {
+          provide: AppService,
+          useValue: {
+            getHello: jest.fn().mockReturnValue('Hello World!'),
+          },
+        },
+      ],
     }).compile();
 
-    appController = app.get<AppController>(AppController);
+    appController = module.get<AppController>(AppController);
+  });
+
+  it('should be defined', () => {
+    expect(appController).toBeDefined();
+  });
+
+  it('should return "success!" from AppService', () => {
+    expect(appController.getContent()).toBe('success');
   });
 });

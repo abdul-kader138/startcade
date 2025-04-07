@@ -12,7 +12,7 @@ import Lang from '../lang/lang';
 import { Helper } from '../utils/helper';
 import { UserDto } from './dto/add-user.dto';
 import { EditUserDto } from './dto/edit-user.dto';
-import { MailerService } from 'src/mailer/mailer.service';
+import { MailerService } from '../mailer/mailer.service';
 
 const prisma = new PrismaClient();
 

@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import * as nodemailer from 'nodemailer';
 import Lang from '../lang/lang';
 import { Helper } from '../utils/helper';
-import { MailerService } from 'src/mailer/mailer.service';
+import { MailerService } from '../mailer/mailer.service';
 
 const prisma = new PrismaClient();
 @Injectable()
