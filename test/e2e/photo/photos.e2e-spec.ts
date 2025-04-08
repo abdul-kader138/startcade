@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PhotosService } from '../../../src/photos/photos.service';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 describe('PhotosService', () => {
   let service: PhotosService;
-  let prisma: jest.Mocked<PrismaClient>;
+  let prisma: jest.Mocked<PrismaService>;
 
   const mockDate = new Date('2025-04-07T15:15:13.886Z');
 
@@ -34,13 +34,13 @@ describe('PhotosService', () => {
         delete: jest.fn().mockResolvedValue(mockPhoto),
         findFirst: jest.fn().mockResolvedValue(mockPhoto),
       },
-    } as unknown as jest.Mocked<PrismaClient>;
+    } as unknown as jest.Mocked<PrismaService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PhotosService,
         {
-          provide: PrismaClient,
+          provide: PrismaService,
           useValue: prisma,
         },
       ],
