@@ -262,6 +262,10 @@ export class AuthService {
       include: { photo: true },
     });
 
+    if (!user) {
+      throw new NotFoundException(Lang.user_not_found_message);
+    }
+  
     return user;
   }
 
@@ -294,7 +298,7 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: {
         reset_password_token: token,
         reset_password_expires: {
