@@ -13,6 +13,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { omit } from 'lodash';
@@ -21,7 +22,6 @@ import { AuthService } from './auth.service';
 import { UserDto } from './dto/add-user.dto';
 import { EditUserDto } from './dto/edit-user.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -200,7 +200,7 @@ export class AuthController {
   @UseGuards(AuthGuard('facebook'))
   async facebookCallback(@Req() req, @Res() res) {
     const user = req.user;
-    await this.authService.OAuthLogin(user, 'facebook',res);
+    await this.authService.OAuthLogin(user, 'facebook', res);
     return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
   }
 
@@ -213,23 +213,23 @@ export class AuthController {
   @Get('github/callback')
   @UseGuards(AuthGuard('github'))
   async githubCallback(@Req() req, @Res() res) {
-     const user = req.user;
-     await this.authService.OAuthLogin(user,'github', res);
-     return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
+    const user = req.user;
+    await this.authService.OAuthLogin(user, 'github', res);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
   }
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth(@Req() req) {
-      // This redirects to Google OAuth page
+    // This redirects to Google OAuth page
   }
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res() res) {
     const user = req.user;
-    await this.authService.OAuthLogin(user, 'google',res);
-    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
+    await this.authService.OAuthLogin(user, 'google', res);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
   }
 
   @Get('steam')
@@ -242,8 +242,7 @@ export class AuthController {
   @UseGuards(AuthGuard('steam'))
   async steamLoginCallback(@Req() req, @Res() res: Response) {
     const user = req.user;
-    await this.authService.OAuthLogin(user, 'steam',res);
-    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`)
+    await this.authService.OAuthLogin(user, 'steam', res);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
   }
-
 }

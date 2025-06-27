@@ -7,17 +7,20 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { Response } from 'express';
+import { PrismaService } from '../../prisma/prisma.service';
 import Lang from '../lang/lang';
+import { MailerService } from '../mailer/mailer.service';
 import { Helper } from '../utils/helper';
 import { UserDto } from './dto/add-user.dto';
 import { EditUserDto } from './dto/edit-user.dto';
-import { MailerService } from '../mailer/mailer.service';
-import { PrismaService } from '../../prisma/prisma.service';
-
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService,private readonly mailerService: MailerService,private prisma: PrismaService) {}
+  constructor(
+    private jwtService: JwtService,
+    private readonly mailerService: MailerService,
+    private prisma: PrismaService,
+  ) {}
   private helper = new Helper();
 
   /**
@@ -33,11 +36,9 @@ export class AuthService {
     }
 
     //  ## disbaled loing with email verification for time being
-     if (!user.is_verified) {
-       throw new UnauthorizedException(
-        Lang.email_not_verify
-       );
-     }
+    if (!user.is_verified) {
+      throw new UnauthorizedException(Lang.email_not_verify);
+    }
 
     return user;
   }
@@ -82,9 +83,10 @@ export class AuthService {
     const email = profile.email || null; // Steam doesn't provide email
     const firstName = profile.firstName || profile.username || 'Unknown';
     const lastName = profile.lastName || '';
-  
-    let user:any = null;
-  
+    const verification_token = crypto.randomBytes(32).toString('hex');
+
+    let user: any = null;
+
     // 🔍 1.Check if provider account is already linked
     const linkedAccount = await this.prisma.userProvider.findUnique({
       where: {
@@ -95,13 +97,13 @@ export class AuthService {
       },
       include: { user: true },
     });
-  
+
     if (linkedAccount) {
       user = linkedAccount.user;
     } else if (email) {
       // 🔗 2. Check if user exists with email, link new provider
       user = await this.prisma.user.findUnique({ where: { email } });
-  
+
       if (user) {
         await this.prisma.userProvider.create({
           data: {
@@ -112,19 +114,20 @@ export class AuthService {
         });
       }
     }
-  
+
     // 🆕 3. Register new user if not found
     if (!user) {
       const fallbackEmail = email ?? `${provider}_${providerId}@noemail.local`;
-  
+
       user = await this.prisma.user.create({
         data: {
           email: fallbackEmail,
           first_name: firstName,
           last_name: lastName,
           password: bcrypt.hashSync('social_login', 10),
-        //  is_verified: !!email, // mark verified only if email present
-          is_verified: true,
+          //  is_verified: !!email, // mark verified only if email present
+          is_verified: email ? false : true,
+          verification_token: email ? verification_token : null,
           userProviders: {
             create: {
               provider,
@@ -134,26 +137,35 @@ export class AuthService {
         },
       });
     }
-  
+
+    if (email) {
+      const verificationUrl = `${process.env.NX_API_BASE_URL}/auth/verify-email?token=${verification_token}`;
+      await this.sendEmail(
+        user?.email,
+        Lang.verification_email_subject,
+        `${user?.first_name} ${user?.last_name}`,
+        verificationUrl,
+        'verification_email_body',
+      );
+    }
+
     // 🎟️ 4. Generate and set JWT token
     const payload = { id: user.id, email: user.email };
     const token = this.jwtService.sign(payload, { expiresIn: '1h' });
-  
+
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60,
     });
-  
+
     // 🔁 5. Redirect based on profile completeness
-   // if (!email) {
-   //   return res.redirect(`${process.env.CLIENT_URL}/complete-profile?token=${token}`);
-   // }
-  
+    // if (!email) {
+    //   return res.redirect(`${process.env.CLIENT_URL}/complete-profile?token=${token}`);
+    // }
   }
-  
-  
+
   /**
    * 🔹 Register User
    */
@@ -178,9 +190,13 @@ export class AuthService {
       },
     });
     const verificationUrl = `${process.env.NX_API_BASE_URL}/auth/verify-email?token=${verification_token}`;
-
-    await this.mailerService.sendMail(user?.email, Lang.verification_email_subject,
-      this.helper.verification_email_body(verificationUrl));
+    await this.sendEmail(
+      user?.email,
+      Lang.verification_email_subject,
+      `${userDto?.first_name} ${userDto?.last_name}`,
+      verificationUrl,
+      'verification_email_body',
+    );
 
     return {
       message: Lang.registration_successful_message,
@@ -265,7 +281,7 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException(Lang.user_not_found_message);
     }
-  
+
     return user;
   }
 
@@ -291,8 +307,14 @@ export class AuthService {
 
     // Send email
     const resetUrl = `${process.env.NX_FRONTEND_URL}reset-password/${updated_user?.reset_password_token}`;
-    await this.mailerService.sendMail(email, Lang.reset_email_subject,
-      this.helper.reset_password_email_body(resetUrl));
+    await this.mailerService.sendMail(
+      email,
+      Lang.reset_email_subject,
+      this.helper.reset_password_email_body(
+        resetUrl,
+        `${user?.first_name} ${user?.last_name}`,
+      ),
+    );
 
     return { message: Lang.password_reset_email };
   }
@@ -323,5 +345,23 @@ export class AuthService {
     }
 
     return { message: Lang.password_updated_successful_message };
+  }
+
+  private async sendEmail(
+    email: string,
+    subject: string,
+    name: string,
+    link: string,
+    emailType: string,
+  ) {
+    if (this.helper[emailType]) {
+      await this.mailerService.sendMail(
+        email,
+        subject,
+        this.helper[emailType](link, `${name}`),
+      );
+    } else {
+      throw new Error(`Invalid email type: ${emailType}`);
+    }
   }
 }
