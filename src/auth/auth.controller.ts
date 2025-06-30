@@ -81,7 +81,7 @@ export class AuthController {
   async verifyEmail(@Query('token') token: string, @Res() res: Response) {
     try {
       await this.authService.verifyEmail(token);
-      return res.redirect(`${process.env.NX_FRONTEND_URL}login?verified=true`); // Redirect to login page after verification
+      return res.redirect(`${process.env.NX_FRONTEND_URL}/login?verified=true`); // Redirect to login page after verification
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
