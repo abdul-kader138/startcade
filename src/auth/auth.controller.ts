@@ -201,7 +201,7 @@ export class AuthController {
   async facebookCallback(@Req() req, @Res() res) {
     const user = req.user;
     await this.authService.OAuthLogin(user, 'facebook', res);
-    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
   }
 
   @Get('github')
@@ -215,7 +215,7 @@ export class AuthController {
   async githubCallback(@Req() req, @Res() res) {
     const user = req.user;
     await this.authService.OAuthLogin(user, 'github', res);
-    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
   }
 
   @Get('google')
@@ -229,7 +229,7 @@ export class AuthController {
   async googleAuthRedirect(@Req() req, @Res() res) {
     const user = req.user;
     await this.authService.OAuthLogin(user, 'google', res);
-    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
   }
 
   @Get('steam')
@@ -243,6 +243,6 @@ export class AuthController {
   async steamLoginCallback(@Req() req, @Res() res: Response) {
     const user = req.user;
     await this.authService.OAuthLogin(user, 'steam', res);
-    return res.redirect(`${process.env.NX_FRONTEND_URL}dashboard`);
+    return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
   }
 }

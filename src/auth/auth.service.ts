@@ -306,7 +306,7 @@ export class AuthService {
     });
 
     // Send email
-    const resetUrl = `${process.env.NX_FRONTEND_URL}reset-password/${updated_user?.reset_password_token}`;
+    const resetUrl = `${process.env.NX_FRONTEND_URL}/reset-password/${updated_user?.reset_password_token}`;
     await this.mailerService.sendMail(
       email,
       Lang.reset_email_subject,
