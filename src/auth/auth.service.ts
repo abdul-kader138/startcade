@@ -81,7 +81,8 @@ export class AuthService {
   async OAuthLogin(profile: any, provider: string, res: Response) {
     const providerId = profile.id;
     const email = profile.email || null; // Steam doesn't provide email
-    const firstName = profile.firstName || profile.username || 'Unknown';
+    const firstName =
+      profile.firstName || profile.username || profile.name || 'Unknown';
     const lastName = profile.lastName || '';
     const verification_token = crypto.randomBytes(32).toString('hex');
 
