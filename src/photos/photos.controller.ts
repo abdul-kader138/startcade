@@ -118,7 +118,7 @@ export class PhotosController {
         imagePath = image.original;
     }
 
-    Logger.log(`Found image: ${imagePath}`);
+    Logger.log(`Found image.: ${imagePath}`);
     const file = createReadStream(
       join(process.env.PHOTOS_BASE_PATH || '', imagePath),
     );
