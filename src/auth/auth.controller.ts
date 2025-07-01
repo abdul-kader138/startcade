@@ -238,7 +238,7 @@ export class AuthController {
     // This redirects to Steam page
   }
 
-  @Get('steam/callback')
+  @Get('steam/return')
   @UseGuards(AuthGuard('steam'))
   async steamLoginCallback(@Req() req, @Res() res: Response) {
     const user = req.user;
