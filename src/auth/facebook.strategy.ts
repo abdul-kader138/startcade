@@ -28,7 +28,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
 
     const user = {
       provider: 'facebook',
-      providerId: id,
+      id: id,
       email: emails?.[0]?.value || null,
       firstName: name?.givenName || '',
       lastName: name?.familyName || '',
