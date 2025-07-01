@@ -6,7 +6,9 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './http-exception-filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'], // enable all levels
+  });
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalPipes(new ValidationPipe());
@@ -16,7 +18,8 @@ async function bootstrap() {
   // Enable CORS for frontend API requests
   const FRONTEND_PORT = process.env.FRONTEND_PORT || 5173;
   const corsOrigins = [`http://localhost:${FRONTEND_PORT}`];
-  if(process.env.NX_FRONTEND_URL) corsOrigins.push(process.env.NX_FRONTEND_URL);
+  if (process.env.NX_FRONTEND_URL)
+    corsOrigins.push(process.env.NX_FRONTEND_URL);
   app.enableCors({
     origin: corsOrigins,
     credentials: true,
