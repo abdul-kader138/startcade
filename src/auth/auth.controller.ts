@@ -241,8 +241,18 @@ export class AuthController {
   @Get('steam/return')
   @UseGuards(AuthGuard('steam'))
   async steamLoginCallback(@Req() req, @Res() res: Response) {
-    const user = req.user;
-    await this.authService.OAuthLogin(user, 'steam', res);
-    return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
+    try {
+      const user = req.user;
+
+      if (!user) {
+        throw new Error('User not found in Steam callback');
+      }
+
+      await this.authService.OAuthLogin(user, 'steam', res);
+      return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
+    } catch (error) {
+      Logger.log('Steam Login Callback Error:', error.message);
+      return res.status(500).send('Steam login failed: ' + error.message);
+    }
   }
 }
