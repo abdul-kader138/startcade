@@ -241,8 +241,9 @@ export class AuthController {
   @Get('steam/return')
   @UseGuards(AuthGuard('steam'))
   async steamLoginCallback(@Req() req, @Res() res: Response) {
-    Logger.log(req);
     try {
+      Logger.log('Steam Callback req.user:', JSON.stringify(req.user, null, 2));
+
       const user = req.user;
 
       if (!user) {
@@ -250,9 +251,13 @@ export class AuthController {
       }
 
       await this.authService.OAuthLogin(user, 'steam', res);
-      return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
+
+      const frontendUrl = process.env.NX_FRONTEND_URL;
+      Logger.log('Redirecting to:', `${frontendUrl}/dashboard`);
+
+      return res.redirect(`${frontendUrl}/dashboard`);
     } catch (error) {
-      Logger.error('Steam Login Callback Error', error.stack || error.message);
+      Logger.error('Steam Login Callback Error:', error.stack || error.message);
       return res.status(500).send('Steam login failed: ' + error.message);
     }
   }
