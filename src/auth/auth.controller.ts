@@ -251,7 +251,7 @@ export class AuthController {
       await this.authService.OAuthLogin(user, 'steam', res);
       return res.redirect(`${process.env.NX_FRONTEND_URL}/dashboard`);
     } catch (error) {
-      Logger.log('Steam Login Callback Error:', error.message);
+      Logger.error('Steam Login Callback Error', error.stack || error.message);
       return res.status(500).send('Steam login failed: ' + error.message);
     }
   }

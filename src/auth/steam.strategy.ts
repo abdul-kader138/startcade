@@ -33,7 +33,7 @@ export class SteamStrategy extends PassportStrategy(Strategy, 'steam') {
 
       return done(null, user);
     } catch (error) {
-      Logger.log(error.message);
+      Logger.error('Steam Login Callback Error', error.stack || error.message);
       return done(error, false); // Pass error to the guard
     }
   }
