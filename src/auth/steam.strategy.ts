@@ -1,28 +1,40 @@
+import { Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
 import { Strategy } from 'passport-steam';
 
 @Injectable()
 export class SteamStrategy extends PassportStrategy(Strategy, 'steam') {
-
   constructor() {
-      super( {
-        apiKey: process.env.STEAM_API_KEY!,
-        returnURL: process.env.STEAM_RETURN_URL!,
-        realm: process.env.STEAM_REALM!,
-      });
-      
-    }
+    super({
+      apiKey: process.env.STEAM_API_KEY!,
+      returnURL: process.env.STEAM_RETURN_URL!,
+      realm: process.env.STEAM_REALM!,
+    });
+  }
 
-  async validate(identifier: string, profile: any, done: Function): Promise<any> {
-    const user = {
-      id: profile.id,
-      username: profile.displayName,
-      avatar: profile.photos?.[2]?.value, 
-      firstName: profile.displayName, 
-      lastName: '',                   
-      profile,
-    };
-    done(null, user);
+  async validate(
+    identifier: string,
+    profile: any,
+    done: Function,
+  ): Promise<any> {
+    try {
+      if (!profile.id) {
+        throw new Error('Missing provider ID (Steam profile.id not returned)');
+      }
+
+      const user = {
+        id: profile.id,
+        username: profile.displayName,
+        avatar: profile.photos?.[2]?.value ?? null,
+        firstName: profile.displayName,
+        lastName: '',
+        profile,
+      };
+
+      return done(null, user);
+    } catch (error) {
+      Logger.log(error.message);
+      return done(error, false); // Pass error to the guard
+    }
   }
 }
